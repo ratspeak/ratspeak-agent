@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Let nearby devices discover and message your desktop agent over Wi-Fi.</string>
+	<key>NSLocationUsageDescription</key>
+	<string>macOS asks this before an app may list nearby Wi-Fi networks. Your location is not read or stored.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>macOS asks this before an app may list nearby Wi-Fi networks. Your location is not read or stored.</string>
+</dict>
+</plist>

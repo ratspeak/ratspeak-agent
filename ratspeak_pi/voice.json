@@ -1,0 +1,88 @@
+{
+  "_doc": "English speech to text for voice messages. Desktops use whisper-base; Pis with 1 GB use vosk, larger Pis whisper-tiny (voice.choose).",
+  "engines": {
+    "whisper-base": {
+      "label": "Whisper base.en",
+      "size_mb": 146,
+      "credit": "OpenAI Whisper (MIT), converted for CTranslate2 by SYSTRAN faster-whisper (MIT)",
+      "files": [
+        {
+          "file": "whisper-base.en-model.bin",
+          "url": "https://huggingface.co/Systran/faster-whisper-base.en/resolve/3d3d5dee26484f91867d81cb899cfcf72b96be6c/model.bin",
+          "sha256": "2a166925539a16005f14ff328359f9b9adb9dc4fb631bb3b227526862e93e2ef",
+          "bytes": 145216508,
+          "path": "model.bin"
+        },
+        {
+          "file": "whisper-base.en-config.json",
+          "url": "https://huggingface.co/Systran/faster-whisper-base.en/resolve/3d3d5dee26484f91867d81cb899cfcf72b96be6c/config.json",
+          "sha256": "f3bc3821e9fc76a27bae538e11ae5b677dcdd352b4600429ce7951d398569aeb",
+          "bytes": 2227,
+          "path": "config.json"
+        },
+        {
+          "file": "whisper-base.en-vocabulary.txt",
+          "url": "https://huggingface.co/Systran/faster-whisper-base.en/resolve/3d3d5dee26484f91867d81cb899cfcf72b96be6c/vocabulary.txt",
+          "sha256": "ff77588746d3a2595d32ab5b69ffd7b95ce2441ac57533cb66fc3eb575a115cf",
+          "bytes": 422309,
+          "path": "vocabulary.txt"
+        }
+      ]
+    },
+    "whisper-tiny": {
+      "label": "Whisper tiny.en",
+      "size_mb": 76,
+      "credit": "OpenAI Whisper (MIT), converted for CTranslate2 by SYSTRAN faster-whisper (MIT)",
+      "files": [
+        {
+          "file": "whisper-tiny.en-model.bin",
+          "url": "https://huggingface.co/Systran/faster-whisper-tiny.en/resolve/0d3d19a32d3338f10357c0889762bd8d64bbdeba/model.bin",
+          "sha256": "1a5afae06a4db91c975c9a9d78be5cc110ee4ea022ad57d55492e4550e936b2a",
+          "bytes": 75537502,
+          "path": "model.bin"
+        },
+        {
+          "file": "whisper-tiny.en-config.json",
+          "url": "https://huggingface.co/Systran/faster-whisper-tiny.en/resolve/0d3d19a32d3338f10357c0889762bd8d64bbdeba/config.json",
+          "sha256": "14b1b421a90349bc551b881461426b561a874049cb9e4c4864f2ca384f6a7cc5",
+          "bytes": 2317,
+          "path": "config.json"
+        },
+        {
+          "file": "whisper-tiny.en-vocabulary.txt",
+          "url": "https://huggingface.co/Systran/faster-whisper-tiny.en/resolve/0d3d19a32d3338f10357c0889762bd8d64bbdeba/vocabulary.txt",
+          "sha256": "ff77588746d3a2595d32ab5b69ffd7b95ce2441ac57533cb66fc3eb575a115cf",
+          "bytes": 422309,
+          "path": "vocabulary.txt"
+        }
+      ]
+    },
+    "vosk": {
+      "label": "Vosk small English",
+      "size_mb": 44,
+      "credit": "Vosk by Alpha Cephei (Apache-2.0) with vosk-model-small-en-us-0.15 (Apache-2.0)",
+      "runtime": {
+        "aarch64": {
+          "file": "vosk-0.3.45-py3-none-manylinux2014_aarch64.whl",
+          "url": "https://files.pythonhosted.org/packages/a4/23/3130a69fa0bf4f5566a52e415c18cd854bf561547bb6505666a6eb1bb625/vosk-0.3.45-py3-none-manylinux2014_aarch64.whl",
+          "sha256": "54efb47dd890e544e9e20f0316413acec7f8680d04ec095c6140ab4e70262704",
+          "bytes": 2368543
+        },
+        "x86_64": {
+          "file": "vosk-0.3.45-py3-none-manylinux_2_12_x86_64.manylinux2010_x86_64.whl",
+          "url": "https://files.pythonhosted.org/packages/fc/ca/83398cfcd557360a3d7b2d732aee1c5f6999f68618d1645f38d53e14c9ff/vosk-0.3.45-py3-none-manylinux_2_12_x86_64.manylinux2010_x86_64.whl",
+          "sha256": "25e025093c4399d7278f543568ed8cc5460ac3a4bf48c23673ace1e25d26619f",
+          "bytes": 7173758
+        }
+      },
+      "files": [
+        {
+          "file": "vosk-model-small-en-us-0.15.zip",
+          "url": "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip",
+          "sha256": "30f26242c4eb449f948e42cb302dd7a686cb29a3423a8367f99ff41780942498",
+          "bytes": 41205931
+        }
+      ]
+    }
+  }
+}

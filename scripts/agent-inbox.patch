@@ -1,0 +1,585 @@
+diff --git a/runtime/agent_rat.py b/runtime/agent_rat.py
+--- a/runtime/agent_rat.py
++++ b/runtime/agent_rat.py
+@@ -127,14 +127,19 @@
+         self.manifest = profile_manifest(profile)
+         if self.manifest["retired"] or self.manifest["paused"]:
+             raise ValueError("Profile is paused or retired")
+-        self.policy = Policy(profile / "state.sqlite3", self.manifest["address"], self.manifest["public_key"], self.manifest["label"])
++        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
++        from ratspeak_pi.admission import AgentInbox
++        self.policy = AgentInbox(profile / "state.sqlite3", self.manifest["address"], self.manifest["public_key"], self.manifest["label"])
+         self.policy.recover_jobs()
++        self.announce_lock = threading.Lock()
+         self.stop = threading.Event()
+         self.changed = threading.Condition()
+         self.native = Native(profile, self.manifest)
+         if not self.native.ready.wait(25) or self.native.identity is None:
+             self.native.close()
+             raise RuntimeError(self.native.error or "Native transport did not become ready")
++        self.native_filter = None
++        self.refresh_access()
+         self.refresh_keys()
+         self.threads = [threading.Thread(target=self.receive, daemon=True), threading.Thread(target=self.send, daemon=True)]
+         for thread in self.threads:
+@@ -145,19 +150,35 @@
+                  if isinstance(p.get("public_key"), str) and re.fullmatch(r"[0-9a-f]{128}", p["public_key"])]
+         self.native.request("peers", peers=peers)
+ 
++    def refresh_access(self):
++        rule = self.policy.native_access()
++        from ratspeak_pi import contacts
++        if rule[0] == "owners" and (self.profile.parent / "config.json").exists() and contacts.owned(contacts.configuration(self.profile.parent)):
++            rule = (rule[0], sorted(set(rule[1]) | set(contacts.addresses(self.profile.parent))))
++        if rule != self.native_filter:
++            self.native.request("access", mode=rule[0], senders=rule[1])
++            self.native_filter = rule
++
+     def receive(self):
+         while not self.stop.is_set():
+             try:
++                self.refresh_access()
+                 event = self.native.messages.get(timeout=.3)
++                from ratspeak_pi import contacts
++                if contacts.receive(self.profile.parent, event):
++                    continue
++                result = self.policy.ingest(event)
++                if result["classification"] in ("discarded", "duplicate", "busy"):
++                    continue
++                if result.get("keys_changed", True):
++                    self.refresh_keys()
++                with self.changed:
++                    self.changed.notify_all()
+             except queue.Empty:
+                 continue
+-            try:
+-                self.policy.ingest(event)
+-                self.refresh_keys()
+-                with self.changed:
+-                    self.changed.notify_all()
+             except Exception as error:
+                 self.native.error = f"Receive processing failed: {type(error).__name__}"
++                self.stop.wait(.3)
+ 
+     def send(self):
+         while not self.stop.wait(.25):
+@@ -166,6 +187,14 @@
+                 break
+             job = self.policy.next_job(receiver_healthy=self.native.identity is not None)
+             if not job:
++                notice = self.policy.take_notice()
++                if notice:
++                    address, key, text = notice
++                    try:
++                        self.native.request("send", timeout=5, destination=address, public_key=key,
++                                            text=text, best_effort=True)
++                    except (OSError, RuntimeError):
++                        pass  # Notices yield to replies and are never retried.
+                 continue
+             try:
+                 if self.stop.is_set():
+@@ -200,6 +229,20 @@
+             result = self.policy.accept(invitation, peer_name=data.get("peer_name"))
+             self.refresh_keys()
+             return result
++        if op == "contacts_send":
++            from ratspeak_pi import contacts
++            if not contacts.beta_enabled(self.profile.parent):
++                raise ValueError("Unlock the Contacts beta first.")
++            cfg = contacts.configuration(self.profile.parent)
++            if not contacts.owned(cfg):
++                raise ValueError("Pair your agent first.")
++            with contacts.closing(contacts.connect(self.profile.parent)) as db:
++                contact = db.execute("SELECT public_key FROM contacts WHERE address=?", (data.get("address"),)).fetchone()
++            text = data.get("text")
++            if not contact or not isinstance(text, str) or len(text.encode()) > 15800:
++                raise ValueError("Invalid contact message.")
++            return self.native.request("send", timeout=15, destination=data["address"], text=text,
++                title=contacts.PEER_TITLE, **({"public_key":contact[0]} if contact[0] else {}))
+         if op == "send":
+             return self.policy.queue_message(data["address"], data["text"], data.get("title", ""), data.get("keep_seconds", 0), reply_to=data.get("reply_to"))
+         if op == "message_status":
+@@ -242,16 +285,16 @@
+             self.refresh_keys()
+             return result
+         if op == "allow":
+-            result = self.policy.allow(data["address"], data.get("name"))
+-            try:
+-                # A new contact's client needs this identity to verify the first message it gets.
+-                self.native.request("announce")
+-            except Exception:
+-                pass
+-            return result
+-        if op == "announce":
+-            self.native.request("announce")
+-            return {"announced": True}
++            return self.policy.allow(data["address"], data.get("name"))
++        if op in ("announce", "announce_saved_name"):
++            with self.announce_lock:
++                saved = profile_manifest(self.profile)
++                if saved["address"] != self.manifest["address"] or saved["public_key"] != self.manifest["public_key"]:
++                    raise ValueError("The saved identity differs from the running receiver")
++                label = validate_label(saved["label"])
++                result = self.native.request("announce", label=label)
++                self.manifest["label"] = self.policy.label = label
++                return {"announced": True, "label": result["label"]}
+         if op == "open_inbox":
+             return self.policy.set_open_inbox(data["enabled"])
+         if op == "stop":
+@@ -571,14 +614,14 @@
+             return {"status": "delivered"}
+         if state["status"] in ("queued", "sending"):
+             return {"status": "trying", "note": f"Not reachable yet; trying again until {state['trying_until']}"} if state["error"] else {"status": "sending"}
+-        return {"status": "not delivered" if state["error"] == "peer not reachable" else "unconfirmed", "note": state["error"]}
++        return {"status": "not delivered", "note": state["error"]}
+ 
+     if args.command == "tell":
+         deadline = time.monotonic() + min(300, max(0, args.wait))
+         while True:
+             result = {"to": address, **delivery()}
+-            if result["status"] in ("delivered", "not delivered", "unconfirmed") or time.monotonic() >= deadline:
+-                return result, int(result["status"] != "delivered" and "note" in result and result["status"] != "trying")
++            if result["status"] in ("delivered", "not delivered") or time.monotonic() >= deadline:
++                return result, int(result["status"] == "not delivered")
+             time.sleep(.5)
+     waited = min(86400, max(0, args.timeout))
+     deadline = time.monotonic() + waited
+diff --git a/runtime/answer.py b/runtime/answer.py
+--- a/runtime/answer.py
++++ b/runtime/answer.py
+@@ -85,9 +85,11 @@
+         return None
+ 
+ 
+-def complete(url, model, messages, key=None, effort=None, timeout=300):
++def complete(url, model, messages, key=None, effort=None, timeout=300, on_usage=None, grammar=None):
+     """One chat completion. Returns the reply text, trimmed for a message."""
+     body = {"model": model, "messages": messages, "stream": False, "max_tokens": 700}
++    if grammar:
++        body["grammar"] = grammar
+     if effort:
+         body["reasoning_effort"] = effort
+     headers = {"Content-Type": "application/json"}
+@@ -108,9 +110,12 @@
+     if len(raw) > MAX_RESPONSE:
+         raise RuntimeError("Model response is too large")
+     try:
+-        text = json.loads(raw)["choices"][0]["message"]["content"]
++        result = json.loads(raw)
++        text = result["choices"][0]["message"]["content"]
+     except (ValueError, LookupError, TypeError):
+         raise RuntimeError("Model response is not a chat completion") from None
++    if on_usage is not None:
++        on_usage(result.get("usage"))
+     if not isinstance(text, str):
+         raise RuntimeError("Model reply is not text")
+     text = re.sub(r"<think>.*?</think>", "", text, flags=re.S).strip()
+diff --git a/runtime/native/src/main.rs b/runtime/native/src/main.rs
+--- a/runtime/native/src/main.rs
++++ b/runtime/native/src/main.rs
+@@ -7,7 +7,7 @@
+ use serde::Deserialize;
+ use serde_json::{Value, json};
+ use std::{
+-    collections::HashMap,
++    collections::{HashMap, HashSet},
+     error::Error,
+     fs::{File, OpenOptions},
+     io::{BufRead, Write},
+@@ -66,6 +66,12 @@
+         #[serde(default)]
+         title: String,
+         public_key: Option<String>,
++        #[serde(default)]
++        best_effort: bool,
++    },
++    Access {
++        senders: Vec<String>,
++        mode: InboxMode,
+     },
+     Peers {
+         peers: Vec<Peer>,
+@@ -75,7 +81,7 @@
+         public_key: String,
+     },
+     Status,
+-    Announce,
++    Announce { label: Option<String> },
+     Shutdown,
+ }
+ 
+@@ -254,10 +260,19 @@
+         return Err("request id exceeds 128 bytes".into());
+     }
+     let allowed: &[&str] = match object.get("op").and_then(Value::as_str) {
+-        Some("send") => &["op", "destination", "text", "title", "public_key"],
++        Some("send") => &[
++            "op",
++            "destination",
++            "text",
++            "title",
++            "public_key",
++            "best_effort",
++        ],
++        Some("access") => &["op", "senders", "mode"],
+         Some("peers") => &["op", "peers"],
+         Some("validate_key") => &["op", "address", "public_key"],
+-        Some("status" | "announce" | "shutdown") => &["op"],
++        Some("announce") => &["op", "label"],
++        Some("status" | "shutdown") => &["op"],
+         _ => return Err("unknown operation".into()),
+     };
+     if object.keys().any(|key| !allowed.contains(&key.as_str())) {
+@@ -315,33 +330,15 @@
+     bound_key(message.source_hash(), parse_hex(key).ok()?).ok()
+ }
+ 
+-async fn incoming(
+-    runtime: &ReticulumHandle,
+-    peers: &Peers,
+-    recipient: [u8; 16],
+-    data: Vec<u8>,
+-    output: &Output,
+-) {
+-    let message = match decode_message(data, recipient) {
+-        Ok(message) => message,
+-        Err(error) => {
+-            output
+-                .emit(json!({"event":"error","scope":"receive","error":error.to_string()}))
+-                .await;
+-            return;
+-        }
++async fn incoming(runtime: &ReticulumHandle, peers: &Peers, message: LxMessage, output: &Output) {
++    let recipient = message.destination_hash();
++    let source = message.source_hash();
++    let pinned = peers.read().ok().and_then(|p| p.get(&source).copied());
++    let mut verified_key = match pinned {
++        Some(key) if message.verify(&key).is_ok() => Some(key),
++        Some(_) => return, // A different signing key cannot own the pinned address.
++        None => embedded_key(&message).filter(|key| message.verify(key).is_ok()),
+     };
+-    let source = message.source_hash();
+-    let mut candidates = Vec::with_capacity(3);
+-    if let Some(key) = peers.read().ok().and_then(|p| p.get(&source).copied()) {
+-        candidates.push(key);
+-    }
+-    if let Some(key) = embedded_key(&message) {
+-        candidates.push(key);
+-    }
+-    let mut verified_key = candidates
+-        .into_iter()
+-        .find(|key| message.verify(key).is_ok());
+     // Unpinned senders (ordinary LXMF clients) are verified against their announce;
+     // one bounded path request fetches it when it is not cached yet.
+     for attempt in 0..2 {
+@@ -360,22 +357,61 @@
+             }
+         }
+     }
+-    output.emit(json!({
+-        "event":"message", "message_id":hex::encode(message.message_id()),
+-        "source":hex::encode(source), "destination":hex::encode(recipient),
+-        "source_key":verified_key.map(hex::encode), "verified":verified_key.is_some(),
+-        "text":std::str::from_utf8(message.content_bytes()).expect("checked UTF-8"),
+-        "title":std::str::from_utf8(message.title_bytes()).expect("checked UTF-8"),
+-        "raw_b64":B64.encode(message.wire_bytes()),
+-        "error":if verified_key.is_some() { Value::Null } else { json!("no candidate key verified the signed source") }
+-    })).await;
++    let Some(key) = verified_key else { return };
++    output
++        .emit(json!({
++            "event":"message", "message_id":hex::encode(message.message_id()),
++            "source":hex::encode(source), "destination":hex::encode(recipient),
++            "source_key":hex::encode(key), "verified":true,
++            "text":std::str::from_utf8(message.content_bytes()).expect("checked UTF-8"),
++            "title":std::str::from_utf8(message.title_bytes()).expect("checked UTF-8"),
++            "raw_b64":B64.encode(message.wire_bytes()),
++            "error":Value::Null
++        }))
++        .await;
++}
++
++// A source address can only exclude traffic here. Authorization still requires LXMF verification.
++#[derive(Deserialize)]
++#[serde(rename_all = "lowercase")]
++enum InboxMode {
++    Owners,
++    Anyone,
++    Later,
++}
++
++struct InboundAccess {
++    senders: HashSet<[u8; 16]>,
++    mode: InboxMode,
++}
++
++impl InboundAccess {
++    fn permits(&self, message: &LxMessage) -> bool {
++        if matches!(self.mode, InboxMode::Owners) {
++            return self.senders.contains(&message.source_hash());
++        }
++        if matches!(self.mode, InboxMode::Later) {
++            let mut words = std::str::from_utf8(message.content_bytes())
++                .unwrap_or("")
++                .split_whitespace();
++            return words
++                .next()
++                .is_some_and(|s| s.eq_ignore_ascii_case("/setup"))
++                && words
++                    .next()
++                    .is_some_and(|s| s.len() == 6 && s.bytes().all(|b| b.is_ascii_digit()))
++                && words.next().is_none();
++        }
++        true
++    }
+ }
+ 
+ async fn drain_events(
+     mut events: DestinationEvents,
+     recipient: [u8; 16],
+-    tx: mpsc::Sender<Vec<u8>>,
+-    output: Output,
++    guests: mpsc::Sender<LxMessage>,
++    contacts: mpsc::Sender<LxMessage>,
++    access: Arc<RwLock<InboundAccess>>,
+     shutdown: ShutdownSignal,
+ ) {
+     loop {
+@@ -397,13 +433,20 @@
+             _ = events.links_closed.recv() => None,
+         };
+         if let Some(data) = data {
+-            if data.len() > MAX_WIRE {
+-                let _ = output.0.try_send(json!({"event":"error","scope":"receive","error":"native message exceeds 64 KiB"}));
+-            } else if tx.try_send(data).is_err() {
+-                // Stop rather than silently accepting more transport proofs after local overload.
+-                let _ = output.0.try_send(json!({"event":"health","ok":false,"error":"inbound processing queue overloaded"}));
+-                shutdown.trigger();
+-                break;
++            if let Ok(message) = decode_message(data, recipient)
++                && let Ok(rule) = access.read()
++                && rule.permits(&message)
++            {
++                // Transport proofs precede application admission. Never acknowledge a dropped
++                // message at the application layer, and keep serving when the inbox drains.
++                let channel = if rule.senders.contains(&message.source_hash()) {
++                    &contacts
++                } else {
++                    &guests
++                };
++                if let Err(mpsc::error::TrySendError::Closed(_)) = channel.try_send(message) {
++                    break;
++                }
+             }
+         }
+     }
+@@ -641,38 +684,37 @@
+     });
+     let peers: Peers = Arc::new(RwLock::new(HashMap::new()));
+     let recipient = address(&identity);
+-    let (incoming_tx, mut incoming_rx) = mpsc::channel(64);
++    let access = Arc::new(RwLock::new(InboundAccess {
++        senders: HashSet::new(),
++        mode: InboxMode::Owners,
++    }));
++    let (guests, guest_rx) = mpsc::channel(48);
++    let (contacts, contact_rx) = mpsc::channel(16);
+     // Move all event receivers out while retaining the registration handle for shutdown.
+     let events = std::mem::replace(&mut destination.events, empty_events());
+     let drainer = tokio::spawn(drain_events(
+         events,
+         recipient,
+-        incoming_tx,
+-        output.clone(),
++        guests,
++        contacts,
++        access.clone(),
+         shutdown.clone(),
+     ));
+-    let incoming_runtime = runtime.clone();
+-    let incoming_peers = peers.clone();
+-    let incoming_output = output.clone();
+-    let receiver = tokio::spawn(async move {
+-        while let Some(data) = incoming_rx.recv().await {
+-            incoming(
+-                &incoming_runtime,
+-                &incoming_peers,
+-                recipient,
+-                data,
+-                &incoming_output,
+-            )
+-            .await;
+-        }
+-    });
+-    let label = args.label;
++    // Waiting for a new guest's announce must not delay verification for configured contacts.
++    let mut receivers = JoinSet::new();
++    for mut input in [guest_rx, contact_rx] {
++        let runtime = runtime.clone();
++        let peers = peers.clone();
++        let output = output.clone();
++        receivers.spawn(async move {
++            while let Some(message) = input.recv().await {
++                incoming(&runtime, &peers, message, &output).await;
++            }
++        });
++    }
++    let mut label = args.label;
+     output.emit(json!({"event":"ready","address":hex::encode(recipient),"public_key":hex::encode(identity.get_public_key()),"label":label})).await;
+-    if let Err(error) = destination
+-        .handle
+-        .announce(announce_options(&label))
+-        .await
+-    {
++    if let Err(error) = destination.handle.announce(announce_options(&label)).await {
+         output
+             .emit(json!({"event":"error","scope":"announce","error":error.to_string()}))
+             .await;
+@@ -695,18 +737,42 @@
+                     Err(error) => { output.result(Value::Null, Err(error)).await; continue; }
+                 };
+                 match operation {
+-                    Operation::Send { destination, text, title, public_key } => {
++                    Operation::Send { destination, text, title, public_key, best_effort } => {
+                         while outbound.try_join_next().is_some() {}
+                         if !outbound.is_empty() { output.result(id, Err("one outbound send is already active".into())).await; continue; }
+                         let runtime = runtime.clone(); let identity = identity.clone(); let peers = peers.clone(); let output = output.clone();
+                         outbound.spawn(async move {
+-                            output.result(id, send(runtime, identity, peers, destination, text, title, public_key).await).await;
++                            let delivery = send(runtime, identity, peers, destination, text, title, public_key);
++                            let result = if best_effort {
++                                timeout(Duration::from_secs(3), delivery).await.unwrap_or_else(|_| Err("notice expired".into()))
++                            } else {
++                                delivery.await
++                            };
++                            output.result(id, result).await;
+                         });
+                     },
+                     Operation::Peers { peers: entries } => output.result(id, replace_peers(&peers, entries)).await,
++                    Operation::Access { senders, mode } => {
++                        let result = (|| -> Result<Value> {
++                            let senders = senders.iter().map(|s| parse_hex(s)).collect::<Result<HashSet<_>>>()?;
++                            *access.write().map_err(|_| "inbound access unavailable")? = InboundAccess { senders, mode };
++                            Ok(json!({}))
++                        })();
++                        output.result(id, result).await;
++                    },
+                     Operation::ValidateKey { address, public_key } => output.result(id, validate_key(&address, &public_key)).await,
+                     Operation::Status => output.result(id, status(&runtime).await).await,
+-                    Operation::Announce => output.result(id, destination.handle.announce(announce_options(&label)).await.map(|_| json!({})).map_err(Into::into)).await,
++                    Operation::Announce { label: requested } => {
++                        if let Some(name) = requested {
++                            if name.trim().is_empty() || name.len() > 128 || name.chars().any(char::is_control) {
++                                output.result(id, Err("Invalid announce label".into())).await;
++                                continue;
++                            }
++                            label = name;
++                        }
++                        let result = destination.handle.announce(announce_options(&label)).await;
++                        output.result(id, result.map(|_| json!({"label":label})).map_err(Into::into)).await;
++                    }
+                     Operation::Shutdown => { output.result(id, Ok(json!({"shutting_down":true}))).await; break; },
+                 }
+             }
+@@ -718,7 +784,7 @@
+     let _ = destination.close().await;
+     runtime.shutdown_and_wait().await;
+     let _ = drainer.await;
+-    let _ = receiver.await;
++    receivers.shutdown().await;
+     output.emit(json!({"event":"stopped"})).await;
+     drop(output);
+     let _ = writer.await;
+@@ -811,6 +877,92 @@
+         .unwrap();
+         assert!(forged.verify(&attacker.get_public_key()).is_err());
+     }
++    #[tokio::test]
++    async fn full_inbound_queue_stays_open_and_resumes() {
++        let me = Identity::new();
++        let sender = Identity::new();
++        let recipient = address(&me);
++        let msg = LxMessageDraft::new(
++            recipient,
++            address(&sender),
++            "",
++            "/setup 012345",
++            DeliveryMethod::Direct,
++        )
++        .unwrap()
++        .sign(&sender.get_signing_key().unwrap())
++        .unwrap()
++        .finalize(None)
++        .unwrap();
++        let wire = msg.pack().unwrap();
++        let contact = Identity::new();
++        let note = LxMessageDraft::new(
++            recipient,
++            address(&contact),
++            "",
++            "Hi",
++            DeliveryMethod::Direct,
++        )
++        .unwrap()
++        .sign(&contact.get_signing_key().unwrap())
++        .unwrap()
++        .finalize(None)
++        .unwrap();
++        let claim_only = InboundAccess {
++            senders: HashSet::new(),
++            mode: InboxMode::Later,
++        };
++        assert!(claim_only.permits(&msg));
++        assert!(!claim_only.permits(&note));
++        let mut allowed = InboundAccess {
++            senders: [address(&contact)].into(),
++            mode: InboxMode::Owners,
++        };
++        assert!(!allowed.permits(&msg));
++        assert!(allowed.permits(&note));
++        allowed.mode = InboxMode::Anyone;
++
++        let (packets, rx) = mpsc::unbounded_channel();
++        let mut events = empty_events();
++        events.link_packets = rx;
++        // Keep the other channels alive so the drainer only exits on shutdown.
++        let (raw, events_raw) = mpsc::channel(1);
++        events.packets = events_raw;
++        let (resources, events_resources) = mpsc::channel(1);
++        events.resource_completions = events_resources;
++        let (tx, mut received) = mpsc::channel(1);
++        tx.try_send(msg).unwrap();
++        let (contacts, mut reserved) = mpsc::channel(1);
++        let shutdown = ShutdownSignal::new();
++        let task = tokio::spawn(drain_events(
++            events,
++            recipient,
++            tx,
++            contacts,
++            Arc::new(RwLock::new(allowed)),
++            shutdown.clone(),
++        ));
++        packets.send((wire.clone(), [0; 16])).unwrap();
++        packets.send((note.pack().unwrap(), [0; 16])).unwrap();
++        assert!(
++            timeout(Duration::from_secs(2), reserved.recv())
++                .await
++                .unwrap()
++                .is_some()
++        );
++        assert!(received.try_recv().is_ok());
++        packets.send((wire, [0; 16])).unwrap();
++        assert!(
++            timeout(Duration::from_secs(2), received.recv())
++                .await
++                .unwrap()
++                .is_some()
++        );
++        shutdown.trigger();
++        task.await.unwrap();
++        drop((raw, resources));
++    }
++
+     #[test]
+     fn malformed_and_bounded_requests() {
+         assert!(parse_request(br#"{"id":1,"op":"status"}"#).is_ok());

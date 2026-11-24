@@ -1,0 +1,14 @@
+build/
+target/
+__pycache__/
+*.pyc
+.DS_Store
+._*
+.venv/
+.env
+.env.local
+venice.key
+identity.seed
+*.gguf
+*.img
+*.img.xz

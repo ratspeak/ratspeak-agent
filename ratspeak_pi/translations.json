@@ -1,0 +1,357 @@
+{
+  "engine": "CTranslate2 4.9 with SentencePiece; packs from Argos Translate (argosopentech.com)",
+  "runtime": {
+    "aarch64": [
+      {
+        "file": "ctranslate2-4.9.0-cp313-cp313-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl",
+        "url": "https://files.pythonhosted.org/packages/ba/0e/8d4f2a7187bfc87ca1d305a5fa8224c9af2ec3542905a6440cd06ac76a1a/ctranslate2-4.9.0-cp313-cp313-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl",
+        "sha256": "0f8bb74a0268f08adfaf01ed74209949a344f01f86713421f12810b99e7d46c9",
+        "bytes": 19085050
+      },
+      {
+        "file": "sentencepiece-0.2.3-cp313-cp313-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl",
+        "url": "https://files.pythonhosted.org/packages/bb/31/a06474a3e0dc8366873fd10b7bbf690b9ad9b00603e02e5f14a370c74ed3/sentencepiece-0.2.3-cp313-cp313-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl",
+        "sha256": "dfc31f9f133a2712d396efa94d666c2ad83d5611ce34f11339429c6831253014",
+        "bytes": 1627113
+      },
+      {
+        "file": "numpy-2.5.5-cp313-cp313-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl",
+        "url": "https://files.pythonhosted.org/packages/57/06/de83b859944409bb9058bc6110581a3d7fc1f54d6df1222744911d7f6b19/numpy-2.5.5-cp313-cp313-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl",
+        "sha256": "ae2b8285d0b4eed24739c3ca9ec0fa424a0247489c01e1d5fe2815a599e11d33",
+        "bytes": 15278148
+      },
+      {
+        "file": "pyyaml-6.0.3-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+        "url": "https://files.pythonhosted.org/packages/50/31/b20f376d3f810b9b2371e72ef5adb33879b25edb7a6d072cb7ca0c486398/pyyaml-6.0.3-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+        "sha256": "ee2922902c45ae8ccada2c5b501ab86c36525b883eff4255313a253a3160861c",
+        "bytes": 767081
+      }
+    ],
+    "x86_64": [
+      {
+        "file": "ctranslate2-4.9.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+        "url": "https://files.pythonhosted.org/packages/16/1f/a6785567ff5c252dd4fea261786ca5818abd80a282aa399b01c294470f67/ctranslate2-4.9.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+        "sha256": "c749bdd14f91994f92ff455969a5a7daff85f72ba7240187357aa262e75346e3",
+        "bytes": 42769889
+      },
+      {
+        "file": "sentencepiece-0.2.3-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+        "url": "https://files.pythonhosted.org/packages/8f/7e/78634050dcac5c3a6aedd6c315b83ce6bd466ccebf68f31a57d8d5655900/sentencepiece-0.2.3-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+        "sha256": "4d82f2a0f704f5d0cf027bc8cc5ad49e23c11a9cc0b5bd08ca51985917963bf5",
+        "bytes": 1717008
+      },
+      {
+        "file": "numpy-2.5.5-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+        "url": "https://files.pythonhosted.org/packages/40/d6/68dd5a83914bbcaf32b3165993f7955979916708cb0156d1e28231e18803/numpy-2.5.5-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+        "sha256": "824025655df929268bfe6b47ed91a00d14209a6f760847cf150be446829e1ce4",
+        "bytes": 15713899
+      },
+      {
+        "file": "pyyaml-6.0.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+        "url": "https://files.pythonhosted.org/packages/74/27/e5b8f34d02d9995b80abcef563ea1f8b56d20134d8f4e5e81733b1feceb2/pyyaml-6.0.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+        "sha256": "0f29edc409a6392443abf94b9cf89ce99889a1dd5376d94316ae5145dfedd5d6",
+        "bytes": 801626
+      }
+    ]
+  },
+  "languages": {
+    "translate-es": {
+      "code": "es",
+      "label": "Spanish",
+      "names": [
+        "spanish",
+        "español",
+        "espanol",
+        "castellano"
+      ],
+      "sample": "¿Dónde está la estación?",
+      "size_mb": 175,
+      "credit": "Argos Translate, trained on OPUS corpora, MIT or CC0; includes the United Nations Parallel Corpus",
+      "packs": [
+        {
+          "from": "en",
+          "to": "es",
+          "file": "translate-en_es-1_0.argosmodel",
+          "url": "https://argos-net.com/v1/translate-en_es-1_0.argosmodel",
+          "sha256": "d698d0ef87ad70d5d184b7fa6965905bf4368f09a2bb9ffb165a79bac96af0c4",
+          "bytes": 87503191
+        },
+        {
+          "from": "es",
+          "to": "en",
+          "file": "translate-es_en-1_0.argosmodel",
+          "url": "https://argos-net.com/v1/translate-es_en-1_0.argosmodel",
+          "sha256": "1b963aa0e0cb6e5ce874f0aa1a1949a19bc4d762e833532239a8834340f6b378",
+          "bytes": 87381097
+        }
+      ]
+    },
+    "translate-fr": {
+      "code": "fr",
+      "label": "French",
+      "names": [
+        "french",
+        "français",
+        "francais"
+      ],
+      "sample": "Où est la gare ?",
+      "size_mb": 132,
+      "credit": "OPUS-MT by Jörg Tiedemann and Santhosh Thottingal (University of Helsinki), CC BY 4.0, converted for CTranslate2 by Argos Translate",
+      "packs": [
+        {
+          "from": "en",
+          "to": "fr",
+          "file": "translate-en_fr-1_9.argosmodel",
+          "url": "https://argos-net.com/v1/translate-en_fr-1_9.argosmodel",
+          "sha256": "3a65ed83364f4e7b06e30f9dd823db1934899ed3ce839e63f46dc7b09dc797b4",
+          "bytes": 65472327
+        },
+        {
+          "from": "fr",
+          "to": "en",
+          "file": "translate-fr_en-1_9.argosmodel",
+          "url": "https://argos-net.com/v1/translate-fr_en-1_9.argosmodel",
+          "sha256": "3b3052fee6bb1e8e8e632a26a723eb2a2c7710dfe73ba61ffd9b83e85d4f14c1",
+          "bytes": 66585033
+        }
+      ]
+    },
+    "translate-de": {
+      "code": "de",
+      "label": "German",
+      "names": [
+        "german",
+        "deutsch"
+      ],
+      "sample": "Wo ist der Bahnhof?",
+      "size_mb": 174,
+      "credit": "Argos Translate, trained on OPUS corpora, MIT or CC0",
+      "packs": [
+        {
+          "from": "en",
+          "to": "de",
+          "file": "translate-en_de-1_0.argosmodel",
+          "url": "https://argos-net.com/v1/translate-en_de-1_0.argosmodel",
+          "sha256": "8d9cd82aedd55a37c3ad98668c7e6d6d806e353435a6d288ab541aa660d11473",
+          "bytes": 87106499
+        },
+        {
+          "from": "de",
+          "to": "en",
+          "file": "translate-de_en-1_0.argosmodel",
+          "url": "https://argos-net.com/v1/translate-de_en-1_0.argosmodel",
+          "sha256": "bc8b6dab53deda59a1d0c314f43127f20679b009aefef290bd6e9229e14fcc39",
+          "bytes": 86704510
+        }
+      ]
+    },
+    "translate-it": {
+      "code": "it",
+      "label": "Italian",
+      "names": [
+        "italian",
+        "italiano"
+      ],
+      "sample": "Dov'è la stazione?",
+      "size_mb": 175,
+      "credit": "Argos Translate, trained on OPUS corpora, MIT or CC0",
+      "packs": [
+        {
+          "from": "en",
+          "to": "it",
+          "file": "translate-en_it-1_0.argosmodel",
+          "url": "https://argos-net.com/v1/translate-en_it-1_0.argosmodel",
+          "sha256": "dde2180001a47904ecbbd688a41e35db8a040e4fd5b52e4f29b4bb499516ab32",
+          "bytes": 87660780
+        },
+        {
+          "from": "it",
+          "to": "en",
+          "file": "translate-it_en-1_0.argosmodel",
+          "url": "https://argos-net.com/v1/translate-it_en-1_0.argosmodel",
+          "sha256": "d2dd23b8b702f612b8127f07c7a0391f5f2a8b93344e6ddc9dd93c81824e85cb",
+          "bytes": 87190224
+        }
+      ]
+    },
+    "translate-pt": {
+      "code": "pt",
+      "label": "Portuguese",
+      "names": [
+        "portuguese",
+        "português",
+        "portugues"
+      ],
+      "sample": "Onde fica a estação?",
+      "size_mb": 136,
+      "credit": "OPUS-MT by Jörg Tiedemann and Santhosh Thottingal (University of Helsinki), CC BY 4.0, converted for CTranslate2 by Argos Translate",
+      "packs": [
+        {
+          "from": "en",
+          "to": "pt",
+          "file": "translate-en_pt-1_9.argosmodel",
+          "url": "https://argos-net.com/v1/translate-en_pt-1_9.argosmodel",
+          "sha256": "0c5350a2fa5b923de1346edc0d42e08e38bab2e33cede3a0b9a48eb4281ad8a9",
+          "bytes": 66179184
+        },
+        {
+          "from": "pt",
+          "to": "en",
+          "file": "translate-pt_en-1_9.argosmodel",
+          "url": "https://argos-net.com/v1/translate-pt_en-1_9.argosmodel",
+          "sha256": "ae76df6f650895c16f2b582065014fab496755ca846ecb19fae81d51f332a38e",
+          "bytes": 69447231
+        }
+      ]
+    },
+    "translate-ar": {
+      "code": "ar",
+      "label": "Arabic",
+      "names": [
+        "arabic",
+        "العربية",
+        "عربي"
+      ],
+      "sample": "أين المحطة؟",
+      "size_mb": 170,
+      "credit": "Argos Translate, trained on OPUS corpora, MIT or CC0; includes the United Nations Parallel Corpus",
+      "packs": [
+        {
+          "from": "en",
+          "to": "ar",
+          "file": "translate-en_ar-1_0.argosmodel",
+          "url": "https://argos-net.com/v1/translate-en_ar-1_0.argosmodel",
+          "sha256": "e2a6e84337f7ebbb55f9dc61dcba3a861c0d786ae5a46fa198fd8d6473f5c775",
+          "bytes": 88502631
+        },
+        {
+          "from": "ar",
+          "to": "en",
+          "file": "translate-ar_en-1_0.argosmodel",
+          "url": "https://argos-net.com/v1/translate-ar_en-1_0.argosmodel",
+          "sha256": "bc98cd4e27ca1cebfae9b7086b2ebc635e4dbed45e7cb5f0891cb7d22feacfad",
+          "bytes": 81869670
+        }
+      ]
+    },
+    "translate-zh": {
+      "code": "zh",
+      "label": "Chinese",
+      "names": [
+        "chinese",
+        "mandarin",
+        "中文",
+        "汉语"
+      ],
+      "sample": "车站在哪里？",
+      "size_mb": 145,
+      "credit": "OPUS-MT by Jörg Tiedemann and Santhosh Thottingal (University of Helsinki), CC BY 4.0, converted for CTranslate2 by Argos Translate",
+      "packs": [
+        {
+          "from": "en",
+          "to": "zh",
+          "file": "translate-en_zh-1_9.argosmodel",
+          "url": "https://argos-net.com/v1/translate-en_zh-1_9.argosmodel",
+          "sha256": "433e7c4f034d87fbe2353161e05f18646d7999452f801a4e1f0378522b9850ab",
+          "bytes": 70743021
+        },
+        {
+          "from": "zh",
+          "to": "en",
+          "file": "translate-zh_en-1_9.argosmodel",
+          "url": "https://argos-net.com/v1/translate-zh_en-1_9.argosmodel",
+          "sha256": "62e7af5a3a48b530e47b7b3e5c78c2de79073ecd815750d2bf3ab35b4a67da2d",
+          "bytes": 74481402
+        }
+      ]
+    },
+    "translate-ja": {
+      "code": "ja",
+      "label": "Japanese",
+      "names": [
+        "japanese",
+        "日本語"
+      ],
+      "sample": "駅はどこですか？",
+      "size_mb": 238,
+      "credit": "Argos Translate, trained on OPUS corpora, MIT or CC0",
+      "packs": [
+        {
+          "from": "en",
+          "to": "ja",
+          "file": "translate-en_ja-1_1.argosmodel",
+          "url": "https://argos-net.com/v1/translate-en_ja-1_1.argosmodel",
+          "sha256": "16300cc4eaa85320520cabcf433b63d01be40ef6966251de72043a083408f716",
+          "bytes": 120470284
+        },
+        {
+          "from": "ja",
+          "to": "en",
+          "file": "translate-ja_en-1_1.argosmodel",
+          "url": "https://argos-net.com/v1/translate-ja_en-1_1.argosmodel",
+          "sha256": "623e3477959a815eb0a5ef53e09079ae8f1f9d3bbcd230473baf28c03fb83335",
+          "bytes": 117155716
+        }
+      ]
+    },
+    "translate-uk": {
+      "code": "uk",
+      "label": "Ukrainian",
+      "names": [
+        "ukrainian",
+        "українська"
+      ],
+      "sample": "Де залізничний вокзал?",
+      "size_mb": 219,
+      "credit": "Argos Translate, trained on OPUS corpora, MIT or CC0",
+      "packs": [
+        {
+          "from": "en",
+          "to": "uk",
+          "file": "translate-en_uk-1_4.argosmodel",
+          "url": "https://argos-net.com/v1/translate-en_uk-1_4.argosmodel",
+          "sha256": "037ebc690c0f7287bff01b09006f76707d7089134205a91ef3d823a3c73811e3",
+          "bytes": 119889246
+        },
+        {
+          "from": "uk",
+          "to": "en",
+          "file": "translate-uk_en-1_4.argosmodel",
+          "url": "https://argos-net.com/v1/translate-uk_en-1_4.argosmodel",
+          "sha256": "3254424c4196f13a7bd97e13cda008d04d5901cbe20739611e426bbacc131156",
+          "bytes": 98942484
+        }
+      ]
+    },
+    "translate-hi": {
+      "code": "hi",
+      "label": "Hindi",
+      "names": [
+        "hindi",
+        "हिन्दी",
+        "हिंदी"
+      ],
+      "sample": "स्टेशन कहाँ है?",
+      "size_mb": 209,
+      "credit": "Argos Translate, trained on OPUS corpora, MIT or CC0",
+      "packs": [
+        {
+          "from": "en",
+          "to": "hi",
+          "file": "translate-en_hi-1_1.argosmodel",
+          "url": "https://argos-net.com/v1/translate-en_hi-1_1.argosmodel",
+          "sha256": "60470a003a9c7339db8c060ed8eafc7cf999ba90dfa5dceebd8d0a4f75f1d3f0",
+          "bytes": 106752178
+        },
+        {
+          "from": "hi",
+          "to": "en",
+          "file": "translate-hi_en-1_1.argosmodel",
+          "url": "https://argos-net.com/v1/translate-hi_en-1_1.argosmodel",
+          "sha256": "f99eadf297073c0f5a320df5d634ebb73e9ab0b819404edf7bd0a0daf6b1ce43",
+          "bytes": 102381771
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Ratspeak Agent",
+  "identifier": "org.ratspeak.agent",
+  "build": { "frontendDist": "../ui" },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [{ "visible": false, "theme": "Dark", "backgroundColor": "#26303D", "title": "Ratspeak Agent", "titleBarStyle": "Overlay", "hiddenTitle": true, "width": 600, "height": 320, "minWidth": 480, "minHeight": 280, "center": true }],
+    "security": {
+      "csp": {
+        "default-src": "'self'", "script-src": "'self'", "style-src": "'self'", "img-src": "'self' data:",
+        "font-src": "'self'", "connect-src": "'self' ipc: http://ipc.localhost", "object-src": "'none'", "base-uri": "'none'"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDhCMjZGRTcwNTlEMjdDODgKUldTSWZOSlpjUDRtaXhIUy96N2hoVXl3YkFpdzhBV3QzL3NOTkQxSHI5NmRJWUwreHlydDJqYTAK",
+      "requireSignedVersion": true,
+      "windows": { "installMode": "passive" }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["app", "dmg", "deb", "rpm", "nsis"],
+    "category": "Utility",
+    "shortDescription": "Host a Ratspeak agent on this computer or a Raspberry Pi",
+    "linux": {
+      "deb": { "desktopTemplate": "linux/agent.desktop", "depends": ["curl", "util-linux", "policykit-1 | polkitd | pkexec", "udisks2", "xdg-utils", "libayatana-appindicator3-1 | libappindicator3-1"] },
+      "rpm": { "desktopTemplate": "linux/agent.desktop", "depends": ["curl", "util-linux", "polkit", "udisks2", "xdg-utils"] }
+    },
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico", "icons/icon.png"]
+  }
+}

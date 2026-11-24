@@ -1,0 +1,67 @@
+{
+  "wikipedia": {
+    "name": "Simple English Wikipedia",
+    "label": "Wikipedia",
+    "command": "/wiki",
+    "example": "/wiki Mount Everest",
+    "item": "article",
+    "file": "wikipedia_en-simple_all_nopic_2026-09.zim",
+    "url": "https://download.kiwix.org/zim/wikipedia/wikipedia_en-simple_all_nopic_2026-09.zim",
+    "sha256": "ee93790aa7907c41570b0861fa15c3645bbcf6da208fd2a426a62459231a66f4",
+    "size_mb": 1095,
+    "download_bytes": 1094936257,
+    "license": "CC BY-SA 4.0"
+  },
+  "medicine": {
+    "name": "Wikipedia Medicine",
+    "label": "Medical",
+    "command": "/med",
+    "example": "/med tetanus",
+    "item": "article",
+    "file": "wikipedia_en_medicine_nopic_2026-10.zim",
+    "url": "https://download.kiwix.org/zim/wikipedia/wikipedia_en_medicine_nopic_2026-10.zim",
+    "sha256": "718fadad40b3491be3fa8f95181a948e4d726f97a79a14e0ef1b90c6b2b03625",
+    "size_mb": 1048,
+    "download_bytes": 1047708415,
+    "license": "CC BY-SA 4.0"
+  },
+  "dictionary": {
+    "name": "Simple English Wiktionary",
+    "label": "Dictionary",
+    "command": "/define",
+    "example": "/define resilient",
+    "item": "dictionary entry",
+    "file": "wiktionary_en-simple_all_nopic_2026-10.zim",
+    "url": "https://download.kiwix.org/zim/wiktionary/wiktionary_en-simple_all_nopic_2026-10.zim",
+    "sha256": "9500466aa6539db45858525694aa48f52a19f2aa02169786b07d76a95f7b1bc6",
+    "size_mb": 32,
+    "download_bytes": 31380738,
+    "license": "CC BY-SA 4.0"
+  },
+  "outdoors": {
+    "name": "The Great Outdoors Stack Exchange",
+    "label": "Outdoors Q&A",
+    "command": "/outdoors",
+    "example": "/outdoors purify water",
+    "item": "question and answers",
+    "file": "outdoors.stackexchange.com_en_all_2026-10.zim",
+    "url": "https://download.kiwix.org/zim/stack_exchange/outdoors.stackexchange.com_en_all_2026-10.zim",
+    "sha256": "73752057bd2253af6cf80c69caf0def158bcf378188f0fbc7ab8ed07bbbe9bc5",
+    "size_mb": 142,
+    "download_bytes": 141820374,
+    "license": "CC BY-SA"
+  },
+  "ham": {
+    "name": "Amateur Radio Stack Exchange",
+    "label": "Ham radio Q&A",
+    "command": "/ham",
+    "example": "/ham antenna for 2 meters",
+    "item": "question and answers",
+    "file": "ham.stackexchange.com_en_all_2026-10.zim",
+    "url": "https://download.kiwix.org/zim/stack_exchange/ham.stackexchange.com_en_all_2026-10.zim",
+    "sha256": "cb8a0cd7ae0078279ace1cd2a05e60505aa2494c29e82dac1942bf4cd54fcf9c",
+    "size_mb": 78,
+    "download_bytes": 77108284,
+    "license": "CC BY-SA"
+  }
+}

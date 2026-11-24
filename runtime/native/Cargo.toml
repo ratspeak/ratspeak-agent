@@ -1,0 +1,21 @@
+[package]
+name = "agent-rat-native"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.96"
+license = "LicenseRef-Reticulum-License"
+publish = false
+
+[workspace]
+
+[dependencies]
+rns-runtime = { path = "../../../rsReticulum/crates/rns-runtime" }
+lxmf-core = { path = "../../../rsLXMF/crates/lxmf-core" }
+lxst-core = { path = "../../../rsLXST/crates/lxst-core" }
+lxst-codec2 = { path = "../../../rsLXST/crates/lxst-codec2" }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+hex = "0.4"
+base64 = "0.22"
+tracing-subscriber = "0.3"
