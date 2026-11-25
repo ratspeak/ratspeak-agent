@@ -642,8 +642,11 @@ pub fn elevated(command: &mut Command, op: CardWrite<'_>, device: &str, selected
             if !path.is_absolute() || !path.is_file() {
                 return Err((None, "Reopen Ratspeak Agent from its AppImage and try again.".into()));
             }
-            // The AppImage's FUSE mount is private to the desktop user. Extract under the helper's UID.
-            return wait_for_helper(command.arg(path).arg("--appimage-extract-and-run").args(args), cache, say);
+            // The AppImage's FUSE mount is private to the desktop user.
+            let helper = include_str!("../linux/appimage-card-helper.sh");
+            command.args(["/bin/sh", "-c", helper, "ratspeak-card-helper"]);
+            command.arg(path).arg("--appimage-extract-and-run").args(args);
+            return wait_for_helper(command, cache, say);
         }
     }
     wait_for_helper(command.arg(exe).args(args), cache, say)
