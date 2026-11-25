@@ -53,7 +53,7 @@ Ratspeak Agent is in **public beta**. Core desktop and Raspberry Pi flows work e
 
 Download **Ratspeak Agent** for your platform from the [Releases](https://github.com/ratspeak/ratspeak-agent/releases) page, or [build from source](#build-from-source).
 
-For the Linux x86-64 AppImage, make the download executable and open it. If FUSE is unavailable, pass `--appimage-extract-and-run` when launching it from a terminal. Keep the file in a writable folder for in-app updates.
+For the Linux x86-64 AppImage, make the download executable and open it. If FUSE is unavailable, set `APPIMAGE_EXTRACT_AND_RUN=1` when launching it from a terminal. Keep the file in a writable folder for in-app updates.
 
 In the app, select **Check for updates** and then **Update now** when an update is available. The app verifies the download, installs it, and reopens. Your system may ask for permission to install it.
 

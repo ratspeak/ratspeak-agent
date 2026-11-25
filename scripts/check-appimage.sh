@@ -30,7 +30,7 @@ echo "Opening the AppImage window"
 export TMPDIR="$PWD/tmp" XDG_CONFIG_HOME="$PWD/config" XDG_DATA_HOME="$PWD/data" XDG_CACHE_HOME="$PWD/cache"
 mkdir -m 700 "$TMPDIR"
 timeout -k 5s 60s xvfb-run -a dbus-run-session -- bash -eu -s -- "$image" <<'BASH'
-  "$1" --appimage-extract-and-run >app.log 2>&1 &
+  APPIMAGE_EXTRACT_AND_RUN=1 "$1" >app.log 2>&1 &
   app_pid=$!
   trap 'kill "$app_pid" 2>/dev/null || true' EXIT
   for _ in {1..40}; do

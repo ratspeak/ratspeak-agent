@@ -131,7 +131,14 @@ fn register(exe: &Path, dir: &Path, starting: bool) -> io::Result<()> {
         arg.push('"');
         Ok(arg.replace('\\', "\\\\"))
     };
-    let entry = format!("[Desktop Entry]\nType=Application\nName=Ratspeak Desktop Agent LAN\nExec={} --desktop-agent-lan {}\nTerminal=false\n", quote(exe)?, quote(dir)?);
+    let prefix = if env::var_os("APPIMAGE").as_deref().map(Path::new) == Some(exe)
+        && env::var_os("APPIMAGE_EXTRACT_AND_RUN").is_some()
+    {
+        "env APPIMAGE_EXTRACT_AND_RUN=1 "
+    } else {
+        ""
+    };
+    let entry = format!("[Desktop Entry]\nType=Application\nName=Ratspeak Desktop Agent LAN\nExec={prefix}{} --desktop-agent-lan {}\nTerminal=false\n", quote(exe)?, quote(dir)?);
     lan::write_changed(
         &folder.join("org.ratspeak.desktop-agent-lan.desktop"),
         entry.as_bytes(),
