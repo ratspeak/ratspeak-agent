@@ -31,7 +31,7 @@ Choose where inference runs:
 
 ## Current State
 
-Ratspeak Agent is in **public beta** (`v0.1.0`). Core desktop and Raspberry Pi flows work end-to-end, but expect rough edges and platform gaps while beta testing continues. If something breaks or feels off, open an issue with your OS, hardware, and steps to reproduce. For suspected security issues, report privately via [SECURITY.md](SECURITY.md).
+Ratspeak Agent is in **public beta**. Core desktop and Raspberry Pi flows work end-to-end, but expect rough edges and platform gaps while beta testing continues. If something breaks or feels off, open an issue with your OS, hardware, and steps to reproduce. For suspected security issues, report privately via [SECURITY.md](SECURITY.md).
 
 - **Verified:** macOS desktop & physical Raspberry Pi 5 flashing/chat, Linux x64/arm64 builds and desktop tray/lifecycle flows, offline libraries, translation packs, and arm64 container installs.
 - **Still being tested:** Interactive Windows (WebView2) & physical SD card writes, physical SD card writes on Linux, live phone-to-agent voice notes, live two-agent A2A file transfers, and non-Pi-5 speed benchmarks.
@@ -52,6 +52,8 @@ Ratspeak Agent is in **public beta** (`v0.1.0`). Core desktop and Raspberry Pi f
 ## Getting Started
 
 Download **Ratspeak Agent** for your platform from the [Releases](https://github.com/ratspeak/ratspeak-agent/releases) page, or [build from source](#build-from-source).
+
+For the Linux x86-64 AppImage, make the download executable and open it. If FUSE is unavailable, pass `--appimage-extract-and-run` when launching it from a terminal. Keep the file in a writable folder for in-app updates.
 
 In the app, select **Check for updates** and then **Update now** when an update is available. The app verifies the download, installs it, and reopens. Your system may ask for permission to install it.
 
@@ -109,7 +111,7 @@ scripts/package.sh
 scripts/build-app.sh
 ```
 
-Linux packages require `curl`, `util-linux`, `polkit`/`pkexec`, `udisks2`, and `xdg-utils` at run time.
+Linux packages use host tools `curl`, `util-linux`, `polkit`/`pkexec`, `udisks2`, and `xdg-utils`. Linux AppImage builds also require `patchelf` and the Ayatana AppIndicator development package.
 
 ## License
 

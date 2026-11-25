@@ -16,7 +16,7 @@ if command -v dpkg-deb >/dev/null && ls "$BUNDLE"/deb/*.deb >/dev/null 2>&1; the
   ./scripts/deb-version.sh "$BUNDLE"/deb/*.deb
 fi
 
-for made in "$BUNDLE"/macos/*.app "$BUNDLE"/dmg/*.dmg "$BUNDLE"/deb/*.deb "$BUNDLE"/rpm/*.rpm "$BUNDLE"/nsis/*.exe "$BUNDLE"/msi/*.msi; do
+for made in "$BUNDLE"/macos/*.app "$BUNDLE"/dmg/*.dmg "$BUNDLE"/deb/*.deb "$BUNDLE"/rpm/*.rpm "$BUNDLE"/appimage/*.AppImage "$BUNDLE"/nsis/*.exe "$BUNDLE"/msi/*.msi; do
   if [ -e "$made" ]; then
     cp -R "$made" build/dist/
     echo "build/dist/$(basename "$made")"

@@ -34,6 +34,7 @@ def main():
         "windows-x86_64-nsis": collect("*.exe"),
         "linux-x86_64-deb": collect("*.deb"),
         "linux-x86_64-rpm": collect("*.rpm"),
+        "linux-x86_64-appimage": collect("*.AppImage"),
     }
     if signed:
         packages["darwin-aarch64-app"] = collect("*.app.tar.gz")

@@ -637,6 +637,15 @@ pub fn wait_for_helper(command: &mut Command, cache: &Path, say: Say) -> Result<
 #[cfg(target_os = "linux")]
 pub fn elevated(command: &mut Command, op: CardWrite<'_>, device: &str, selected_media: &str, cache: &Path, say: Say) -> Result<(), (Option<i32>, String)> {
     let (exe, args) = helper_arguments(op, device, selected_media, cache).map_err(|e| (None, e))?;
+    if tauri::utils::platform::bundle_type() == Some(tauri::utils::config::BundleType::AppImage) {
+        if let Some(path) = std::env::var_os("APPIMAGE").map(PathBuf::from) {
+            if !path.is_absolute() || !path.is_file() {
+                return Err((None, "Reopen Ratspeak Agent from its AppImage and try again.".into()));
+            }
+            // The AppImage's FUSE mount is private to the desktop user. Extract under the helper's UID.
+            return wait_for_helper(command.arg(path).arg("--appimage-extract-and-run").args(args), cache, say);
+        }
+    }
     wait_for_helper(command.arg(exe).args(args), cache, say)
 }
 

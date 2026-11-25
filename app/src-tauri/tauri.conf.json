@@ -22,7 +22,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["app", "dmg", "deb", "rpm", "nsis"],
+    "targets": ["app", "dmg", "deb", "rpm", "appimage", "nsis"],
     "category": "Utility",
     "shortDescription": "Host a Ratspeak agent on this computer or a Raspberry Pi",
     "linux": {

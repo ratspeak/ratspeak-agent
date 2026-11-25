@@ -1,0 +1,10 @@
+{
+  "build": {
+    "beforeBundleCommand": { "script": "bash ../../scripts/stage-appimage-runtime.sh", "cwd": "." }
+  },
+  "bundle": {
+    "linux": {
+      "appimage": { "files": { "/usr/lib": "target/appimage-runtime" } }
+    }
+  }
+}
