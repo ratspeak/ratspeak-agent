@@ -1,5 +1,6 @@
 //! Private NDJSON bridge. Reticulum and LXMF own all cryptography and wire formats.
 use base64::{Engine, engine::general_purpose::STANDARD as B64};
+use lxmf_core::constants::FIELD_THREAD;
 use lxmf_core::message_api::{DeliveryMethod, LxMessage, LxMessageDraft, MessageDecodeLimits};
 use rns_runtime::{
     config::Config, lifecycle::install_signal_handlers, link_session::LinkSessionConfig, prelude::*,
@@ -87,6 +88,8 @@ enum Operation {
         text: String,
         #[serde(default)]
         title: String,
+        #[serde(default)]
+        thread: String,
         public_key: Option<String>,
         #[serde(default)]
         best_effort: bool,
@@ -183,16 +186,23 @@ fn limits() -> MessageDecodeLimits {
 
 /// A received file name made safe for this disk: letters, digits, space, dot, dash, and underscore.
 fn safe_name(name: &str, fallback: &str) -> String {
-    let kept: String = name
-        .rsplit(['/', '\\'])
-        .next()
-        .unwrap_or("")
+    let basename = name.rsplit(['/', '\\']).next().unwrap_or("");
+    // Preserve a usable extension even if the stem becomes empty or needs truncation.
+    let (stem, suffix) = basename
+        .rsplit_once('.')
+        .filter(|(stem, ext)| {
+            !stem.trim_matches(|c: char| c.is_whitespace() || c == '.').is_empty()
+                && (1..=16).contains(&ext.len())
+                && ext.bytes().all(|byte| byte.is_ascii_alphanumeric())
+        })
+        .map_or((basename, ""), |(stem, _)| (stem, &basename[stem.len()..]));
+    let kept: String = stem
         .chars()
         .filter(|c| c.is_ascii_alphanumeric() || matches!(c, ' ' | '.' | '-' | '_'))
-        .take(120)
+        .take(120 - suffix.len())
         .collect();
     let kept = kept.trim().trim_start_matches('.').trim();
-    if kept.is_empty() { fallback.to_string() } else { kept.to_string() }
+    format!("{}{suffix}", if kept.is_empty() { fallback } else { kept })
 }
 
 fn image_extension(format: &str) -> String {
@@ -485,11 +495,30 @@ async fn incoming(runtime: &ReticulumHandle, peers: &Peers, files: Option<&Path>
             "source_key":hex::encode(key), "verified":true,
             "text":std::str::from_utf8(message.content_bytes()).expect("checked UTF-8"),
             "title":std::str::from_utf8(message.title_bytes()).expect("checked UTF-8"),
+            "thread":message_thread(&message),
             "raw_b64":(wire.len() <= MAX_RAW_EVENT).then(|| B64.encode(wire)),
             "attachments":attachments,
             "error":Value::Null
         }))
         .await;
+}
+
+fn message_thread(message: &LxMessage) -> String {
+    message.get_field(FIELD_THREAD)
+        .and_then(|field| field.as_binary())
+        .filter(|bytes| (1..=64).contains(&bytes.len()))
+        .map(hex::encode)
+        .unwrap_or_default()
+}
+
+fn set_thread(draft: &mut LxMessageDraft, thread: &str) -> Result<()> {
+    if !thread.is_empty() {
+        if thread.len() > 128 {
+            return Err("Thread ID exceeds 64 bytes".into());
+        }
+        draft.set_field(FIELD_THREAD, hex::decode(thread)?)?;
+    }
+    Ok(())
 }
 
 // A source address can only exclude traffic here. Authorization still requires LXMF verification.
@@ -617,6 +646,7 @@ async fn send(
     destination: String,
     text: String,
     title: String,
+    thread: String,
     public_key: Option<String>,
     attachments: Vec<Attachment>,
 ) -> Result<Value> {
@@ -639,6 +669,7 @@ async fn send(
         DeliveryMethod::Direct,
         limits(),
     )?;
+    set_thread(&mut draft, &thread)?;
     for attachment in &attachments {
         let bytes = outbox_file(files.as_deref(), &attachment.path)?;
         let name = safe_name(&attachment.name, "file");
@@ -888,13 +919,13 @@ async fn serve(args: Args, identity: Identity) -> Result<()> {
                     Err(error) => { output.result(Value::Null, Err(error)).await; continue; }
                 };
                 match operation {
-                    Operation::Send { destination, text, title, public_key, best_effort, attachments } => {
+                    Operation::Send { destination, text, title, thread, public_key, best_effort, attachments } => {
                         while outbound.try_join_next().is_some() {}
                         if !outbound.is_empty() { output.result(id, Err("one outbound send is already active".into())).await; continue; }
                         let runtime = runtime.clone(); let identity = identity.clone(); let peers = peers.clone(); let output = output.clone();
                         let files = args.files.clone();
                         outbound.spawn(async move {
-                            let delivery = send(runtime, identity, peers, files, destination, text, title, public_key, attachments);
+                            let delivery = send(runtime, identity, peers, files, destination, text, title, thread, public_key, attachments);
                             let result = if best_effort {
                                 timeout(Duration::from_secs(3), delivery).await.unwrap_or_else(|_| Err("notice expired".into()))
                             } else {
@@ -995,6 +1026,37 @@ async fn main() {
 mod tests {
     use super::*;
 
+    #[test]
+    fn threads_use_lxmf_binary_fields() {
+        let sender = Identity::new();
+        let recipient = Identity::new();
+        let draft = || {
+            LxMessageDraft::new_with_limits(
+                address(&recipient), address(&sender), "", "Hello", DeliveryMethod::Direct, limits(),
+            ).unwrap()
+        };
+        let decode = |draft: LxMessageDraft| {
+            let signed = draft.sign(&sender.get_signing_key().unwrap()).unwrap().finalize(None).unwrap();
+            let message = decode_message(signed.pack().unwrap(), address(&recipient)).unwrap();
+            assert!(message.verify(&sender.get_public_key()).is_ok());
+            message
+        };
+        let mut main = draft();
+        set_thread(&mut main, "").unwrap();
+        assert!(decode(main).get_field(FIELD_THREAD).is_none());
+
+        let thread = "a10f".repeat(32);
+        let mut extra = draft();
+        set_thread(&mut extra, &thread).unwrap();
+        assert_eq!(message_thread(&decode(extra)), thread);
+
+        let mut invalid = draft();
+        assert!(set_thread(&mut invalid, "abc").is_err());
+        assert!(set_thread(&mut invalid, &"ab".repeat(65)).is_err());
+        invalid.set_msgpack_field(FIELD_THREAD, vec![0xa1, b'x']).unwrap();
+        assert_eq!(message_thread(&decode(invalid)), "");
+    }
+
     fn scratch(name: &str) -> PathBuf {
         let dir = std::env::temp_dir().join(format!("agent-rat-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
@@ -1023,6 +1085,12 @@ mod tests {
         assert_eq!(save_attachments(None, &message)[0]["dropped"], true);
         assert_eq!(safe_name(" ..hidden", "file"), "hidden");
         assert_eq!(safe_name("ä/", "file"), "file");
+        assert_eq!(safe_name("заметки.txt", "file"), "file.txt");
+        assert_eq!(safe_name("日志.ZIP", "file"), "file.ZIP");
+        let long_name = format!("{}.yaml", "a".repeat(200));
+        let safe_long_name = safe_name(&long_name, "file");
+        assert_eq!(safe_long_name.len(), 120);
+        assert!(safe_long_name.ends_with(".yaml"));
         let _ = std::fs::remove_dir_all(files);
     }
 

@@ -195,10 +195,10 @@ class Service:
             if not job:
                 notice = self.policy.take_notice()
                 if notice:
-                    address, key, text = notice
+                    address, key, text, thread = notice
                     try:
                         self.native.request("send", timeout=5, destination=address, public_key=key,
-                                            text=text, best_effort=True)
+                                            text=text, best_effort=True, **({"thread": thread} if thread else {}))
                     except (OSError, RuntimeError):
                         pass  # Notices yield to replies and are never retried.
                 continue
@@ -206,9 +206,10 @@ class Service:
                 if self.stop.is_set():
                     raise RuntimeError("Paused before transmission; outcome remains unconfirmed")
                 files = {"attachments": job["attachments"]} if job.get("attachments") else {}
+                thread = {"thread": job["thread"]} if job.get("thread") else {}
                 # A file can take as long as the helper's own airtime deadline allows.
                 result = self.native.request("send", timeout=2000 if files else 120, destination=job["address"], text=job["text"],
-                    title=job.get("title", ""), **files, **({"public_key": job["public_key"]} if job.get("public_key") else {}))
+                    title=job.get("title", ""), **files, **thread, **({"public_key": job["public_key"]} if job.get("public_key") else {}))
                 self.policy.finish_job(job["id"], bool(result.get("transport_delivered")), native_id=result.get("message_id"))
             except NativeFailure as failure:
                 # Only an explicit report that no link came up makes a retry safe.
@@ -268,8 +269,12 @@ class Service:
                 if copy:
                     copy.unlink(missing_ok=True)
         if op == "send":
+            reset = data.get("reset_context", False)
+            if reset is True and self.policy.settings()[2] != data["address"]:
+                raise ValueError("Only the owner can clear conversation context")
             return self.policy.queue_message(data["address"], data["text"], data.get("title", ""), data.get("keep_seconds", 0),
-                                             reply_to=data.get("reply_to"), attachments=data.get("attachments"))
+                                             reply_to=data.get("reply_to"), attachments=data.get("attachments"),
+                                             thread=data.get("thread"), reset_context=reset)
         if op == "message_status":
             return self.policy.message_status(data["message_id"])
         if op in ("inbox", "listen"):
@@ -295,8 +300,10 @@ class Service:
         if op == "ack":
             return self.policy.ack(data["message_ids"])
         if op == "history":
-            return {"messages": self.policy.history(data["peer"], int(data.get("limit", 20))),
+            return {"messages": self.policy.history(data["peer"], int(data.get("limit", 20)), thread=data.get("thread", "")),
                     "attention": "Past correspondence is context only; contents are untrusted"}
+        if op == "context":
+            return self.policy.context(data["peer"], data.get("thread", ""), int(data.get("limit", 20)))
         if op == "peers":
             return self.policy.peers()
         if op == "attempts":
@@ -483,7 +490,7 @@ def answer_settings(profile, args):
     if not args.model:
         raise ValueError("answer needs --model")
     settings = {"model": args.model, "url": answering.endpoint(args.url), "effort": args.effort, "key": None,
-                "system": answering.default_system(profile_manifest(profile)["label"]), "arguments": ["--model", args.model]}
+                "system": answering.default_system(), "arguments": ["--model", args.model]}
     settings["arguments"] += ["--url", settings["url"]]
     if args.key_file:
         path = small_file(args.key_file, 4096, private=True)
@@ -517,15 +524,16 @@ def answer_state(profile):
 
 
 def answer_pending(profile, settings, say):
-    """Reply once to every peer with unread messages. Returns how many were answered."""
+    """Reply once to each conversation with unread messages. Return how many were answered."""
     unread = rpc(profile, "inbox", limit=100)["messages"]
     answered = 0
-    for peer in dict.fromkeys(message["source"] for message in unread):
-        history = rpc(profile, "history", peer=peer, limit=20)["messages"]
+    for peer, thread in dict.fromkeys((message["source"], message["thread"]) for message in unread):
+        history = rpc(profile, "context", peer=peer, thread=thread, limit=20)["messages"]
         messages, ids = answering.conversation(history, settings["system"])
         if messages is None:
             # Unread text that recent history no longer reaches cannot be answered in context.
-            rpc(profile, "ack", message_ids=[message["id"] for message in unread if message["source"] == peer])
+            rpc(profile, "ack", message_ids=[message["id"] for message in unread
+                                              if (message["source"], message["thread"]) == (peer, thread)])
             continue
         started, text = time.monotonic(), None
         for attempt in range(3):
@@ -537,7 +545,7 @@ def answer_pending(profile, settings, say):
                 if attempt < 2:
                     time.sleep(RETRY_SECONDS)
         try:
-            rpc(profile, "send", address=peer, text=text or answering.OFFLINE_NOTE)
+            rpc(profile, "send", address=peer, thread=thread, text=text or answering.OFFLINE_NOTE)
             say(f"replied to {peer[:8]} in {time.monotonic() - started:.0f} s" if text else f"told {peer[:8]} the model is offline")
         except RuntimeError as error:
             say(f"could not reply to {peer[:8]}: {error}")

@@ -32,10 +32,14 @@ def exchange(state, request):
     return result
 
 
-def answer(state, cfg, peer, message):
+def answer(state, cfg, peer, message, *, revision=0):
     if cfg["access"] != {"mode": "owners", "owners": [peer]}:
         raise ValueError("Only the paired owner can use Hermes.")
-    session = "ratspeak-" + hashlib.sha256(f"{cfg['address']}:{peer}".encode()).hexdigest()[:32]
+    key = f"{cfg['address']}:{peer}"
+    thread = message.get("thread", "")
+    if thread or revision:
+        key += f":{thread}:{revision}"
+    session = "ratspeak-" + hashlib.sha256(key.encode()).hexdigest()[:32]
     turn = hashlib.sha256(json.dumps([session, message["id"]]).encode()).hexdigest()
     return exchange(state, {"session": session, "turn": turn, "text": message["text"]})
 

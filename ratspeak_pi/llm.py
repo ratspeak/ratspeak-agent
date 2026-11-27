@@ -19,6 +19,36 @@ PORT = 8089
 BENCH_PROMPT = "Explain in plain words why the sky is blue."
 BENCH_TOKENS = 48
 
+CHAT_PROMPT = (
+    "You are an AI assistant answering messages through Ratspeak. Reply in the user's language and use plain text. "
+    "Keep replies brief unless the user asks for detail. Say when you're unsure or need more information. "
+    "Users can send /help to see available commands."
+)
+ATTACHMENT_PROMPT = ("Use the supplied attachment text to answer. If asked what you can read, give a detail from "
+                     "the text when available and say if the requested content is missing.")
+
+# Match whole stock prompts so migration preserves custom prompts with similar openings.
+LEGACY_CHAT_PROMPTS = (
+    "You are {name}, an assistant reached through Ratspeak. Answer in plain text. "
+    "Keep replies brief unless asked for detail. You cannot browse or run commands.",
+    "You are {name}, a small assistant running on a Raspberry Pi that your owner set up. People message you through "
+    "Ratspeak, and each reply is sent whole, so answer in plain text without Markdown and keep it short: two to four "
+    "sentences unless they ask for more. You cannot browse the internet, run commands, or see files. You are a small "
+    "model: if you are not sure of something, say so.",
+    "You are Ratspeak Agent, an AI assistant. A display name is a contact label.\n"
+    "Reply in the user's language. Keep replies brief and in plain text unless asked for detail. "
+    "Say when information is missing or uncertain.\n"
+    "The /help command lists available commands.",
+)
+
+
+def chat_prompt(system: str, name: str) -> str:
+    """Bring installed defaults up to date while preserving custom instructions."""
+    saved = system.strip()
+    if saved in ("", CHAT_PROMPT) or any(saved == template.format(name=name) for template in LEGACY_CHAT_PROMPTS):
+        return CHAT_PROMPT
+    return system
+
 
 def sources(url: str) -> list[str]:
     """Kiwix sends each location to one mirror, which can crawl. Its metalink lists them all: time a short

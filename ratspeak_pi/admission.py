@@ -62,7 +62,7 @@ class AgentInbox(Policy):
 
     def _busy(self, event, text, now):
         if self.notice is None and now >= self.next_notice and self.notified.get(event["source"], 0) <= now:
-            self.notice = (event["source"], event["source_key"], text, now + 10)
+            self.notice = (event["source"], event["source_key"], text, event.get("thread", ""), now + 10)
             self.next_notice = now + 30
             self.notified = {p: end for p, end in self.notified.items() if end > now}
             self.notified[event["source"]] = now + 180
@@ -71,11 +71,11 @@ class AgentInbox(Policy):
     def take_notice(self):
         with self._lock:
             notice, self.notice = self.notice, None
-            if not notice or notice[3] <= time.monotonic():
+            if not notice or notice[4] <= time.monotonic():
                 return None
             mode, allowed, _, _ = self.settings()
             if (mode == "anyone" or (mode == "owners" and notice[0] in allowed)) and self._peer_allowed(notice[0], notice[1]):
-                return notice[:3]
+                return notice[:4]
             return None
 
     def _quarantine(self, event, reason, now):

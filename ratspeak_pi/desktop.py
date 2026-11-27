@@ -144,7 +144,7 @@ def configure(settings):
                address=manifest["address"], link=f"lxma://{manifest['address']}:{manifest['public_key']}")
     if clean["access"]["mode"] == "later":
         cfg["claim_secret"] = secrets.token_hex(32)
-    atomic_text(STATE / "system.txt", setup.AGENT_PROMPT.format(name=clean["name"]))
+    atomic_text(STATE / "system.txt", llm.CHAT_PROMPT)
     atomic_json(CONFIG, cfg)
 
 

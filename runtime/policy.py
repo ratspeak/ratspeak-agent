@@ -57,6 +57,12 @@ def _hex(value, length):
     return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{%d}" % length, value) is not None
 
 
+def _thread(value):
+    if not isinstance(value, str) or not re.fullmatch(r"(?:[0-9a-f]{2}){0,64}", value):
+        raise ValueError("Invalid LXMF thread ID")
+    return value
+
+
 def _json(value):
     return json.dumps(value, separators=(",", ":"), ensure_ascii=False, sort_keys=True)
 
@@ -170,6 +176,12 @@ class Policy:
                 self.db.execute("ALTER TABLE jobs ADD COLUMN attachments TEXT")
             if "attachments" not in columns:
                 self.db.execute("ALTER TABLE inbox ADD COLUMN attachments TEXT")
+            if "thread" not in columns:
+                self.db.execute("ALTER TABLE inbox ADD COLUMN thread TEXT NOT NULL DEFAULT ''")
+            if "thread" not in job_columns:
+                self.db.execute("ALTER TABLE jobs ADD COLUMN thread TEXT NOT NULL DEFAULT ''")
+            if "context_through" not in job_columns:
+                self.db.execute("ALTER TABLE jobs ADD COLUMN context_through INTEGER")
             # Preserve pre-upgrade revocation decisions without releasing old unread work.
             self.db.execute("UPDATE inbox SET suppressed=1 WHERE unread=1 AND source IN (SELECT address FROM peers WHERE revoked=1)")
 
@@ -209,14 +221,15 @@ class Policy:
         return pending < MAX_PENDING and self._count("jobs") < MAX_JOBS
 
     def _queue(self, kind, address, payload, now, *, attempt_id=None, message_id=None, title="", available_at=None, keep_until=None,
-               attachments=None):
+               attachments=None, thread="", context_through=None):
         if not self._room():
             raise ValueError("outbox capacity reached; preserved history requires owner review")
         result = self.db.execute(
-            "INSERT INTO jobs(kind,address,text,title,attempt_id,message_id,status,created_at,available_at,keep_until,attachments)"
-            " VALUES (?,?,?,?,?,?,'queued',?,?,?,?)",
+            "INSERT INTO jobs(kind,address,text,title,attempt_id,message_id,status,created_at,available_at,keep_until,attachments,thread,context_through)"
+            " VALUES (?,?,?,?,?,?,'queued',?,?,?,?,?,?)",
             (kind, address, payload if kind == "plain" else _json(payload), title, attempt_id, message_id, now,
-             now if available_at is None else available_at, keep_until, _json(attachments) if attachments else None),
+             now if available_at is None else available_at, keep_until, _json(attachments) if attachments else None,
+             thread, context_through),
         )
         return result.lastrowid
 
@@ -442,8 +455,8 @@ class Policy:
             valid_title = False
         if not valid_title:
             return self._quarantine(event, "invalid title", now)
-        cursor = self.db.execute("INSERT INTO inbox(native_id,message_id,source,title,text,received_at) VALUES (?,?,?,?,?,?)",
-                                 (event["message_id"], payload["message_id"], source, title, body, now))
+        cursor = self.db.execute("INSERT INTO inbox(native_id,message_id,source,title,text,received_at,thread) VALUES (?,?,?,?,?,?,?)",
+                                 (event["message_id"], payload["message_id"], source, title, body, now, _thread(event.get("thread", ""))))
         self._queue("receipt", source, {"protocol": PROTOCOL, "version": VERSION, "type": "receipt", "message_id": payload["message_id"]}, now, message_id=payload["message_id"])
         return {"classification": "admitted", "inbox_id": cursor.lastrowid, "message_id": payload["message_id"]}
 
@@ -477,8 +490,9 @@ class Policy:
         self.db.execute("""INSERT INTO peers(address,public_key,admitted,ever_admitted,plain,created_at,updated_at)
             VALUES (?,?,1,1,1,?,?) ON CONFLICT(address) DO UPDATE SET public_key=excluded.public_key""",
             (source, key, now, now))
-        cursor = self.db.execute("INSERT INTO inbox(native_id,source,title,text,received_at,attachments) VALUES (?,?,?,?,?,?)",
-                                 (event["message_id"], source, title, text, now, _json(attachments) if attachments else None))
+        cursor = self.db.execute("INSERT INTO inbox(native_id,source,title,text,received_at,attachments,thread) VALUES (?,?,?,?,?,?,?)",
+                                 (event["message_id"], source, title, text, now, _json(attachments) if attachments else None,
+                                  _thread(event.get("thread", ""))))
         return {"classification": "admitted_plain", "inbox_id": cursor.lastrowid}
 
     def allow(self, address, name=None, reinstate=False):
@@ -532,7 +546,11 @@ class Policy:
         """Remove the files of a message that was not admitted."""
         message_id = event.get("message_id") if isinstance(event, dict) else None
         if _hex(message_id, 64):
-            shutil.rmtree(self.files / "incoming" / message_id, ignore_errors=True)
+            with self._lock:
+                # A retransmission can refer to the same files as an already admitted message.
+                kept = self.db.execute("SELECT 1 FROM inbox WHERE native_id=? AND attachments IS NOT NULL", (message_id,)).fetchone()
+                if kept is None:
+                    shutil.rmtree(self.files / "incoming" / message_id, ignore_errors=True)
 
     def prune_received(self, limit=MAX_RECEIVED_BYTES):
         """Keep received files under the limit by removing the oldest messages' folders."""
@@ -618,7 +636,7 @@ class Policy:
         self.db.execute("UPDATE jobs SET status='skipped',error='paired',finished_at=? WHERE attempt_id=? AND status='queued'", (now, attempt_id))
         return {"classification": "paired", "attempt_id": attempt_id, "evidence": "verified acknowledgement received"}
 
-    def queue_message(self, address, text, title="", keep_seconds=0, *, reply_to=None, attachments=None):
+    def queue_message(self, address, text, title="", keep_seconds=0, *, reply_to=None, attachments=None, thread=None, reset_context=False):
         """Queue text for a peer. With keep_seconds, an unreachable peer is tried again until that long from now.
         Contacts on ordinary LXMF can also get one file or image from files/outbox."""
         if not _hex(address, 32) or not isinstance(text, str) or len(text.encode("utf-8")) > MAX_TEXT_BYTES:
@@ -627,6 +645,10 @@ class Policy:
             raise ValueError("title exceeds 1024 UTF-8 bytes")
         if type(keep_seconds) not in (int, float) or not 0 <= keep_seconds <= MAX_KEEP_SECONDS:
             raise ValueError("keep_seconds must be between 0 and one week")
+        if thread is not None:
+            _thread(thread)
+        if type(reset_context) is not bool or (reset_context and (not isinstance(reply_to, list) or len(reply_to) != 1)):
+            raise ValueError("A context reset must reply to one message")
         attachments = self._outgoing(attachments)
         with self._transaction():
             if not self._peer_allowed(address, admitted=True):
@@ -636,10 +658,14 @@ class Policy:
                         or any(type(i) is not int or i <= 0 for i in reply_to) or len(set(reply_to)) != len(reply_to)):
                     raise ValueError("Invalid reply message IDs")
                 marks = ",".join("?" for _ in reply_to)
-                rows = self.db.execute(f"SELECT unread FROM inbox WHERE source=? AND suppressed=0 AND id IN ({marks})",
+                rows = self.db.execute(f"SELECT unread,thread FROM inbox WHERE source=? AND suppressed=0 AND id IN ({marks})",
                                        (address, *reply_to)).fetchall()
                 if len(rows) != len(reply_to):
                     raise ValueError("The incoming messages have changed")
+                threads = {row["thread"] for row in rows}
+                if len(threads) != 1 or (thread is not None and thread not in threads):
+                    raise ValueError("Reply messages must belong to the same conversation")
+                thread = threads.pop()
                 if not any(row["unread"] for row in rows):
                     return {"status": "already_handled"}
                 if not all(row["unread"] for row in rows):
@@ -649,19 +675,20 @@ class Policy:
             message_id = secrets.token_hex(16)
             now = time.time()
             keep_until = now + keep_seconds if keep_seconds else None
+            conversation = {"thread": thread or "", "context_through": reply_to[0] if reset_context else None}
             if self._peer(address)["plain"]:
                 text = text.strip()
                 if not text and not attachments:
                     raise ValueError("message text is empty")
                 job_id = self._queue("plain", address, text, now, message_id=message_id, title=title, keep_until=keep_until,
-                                     attachments=attachments)
+                                     attachments=attachments, **conversation)
                 return {"job_id": job_id, "message_id": message_id, "status": "queued", "plain": True}
             if attachments:
                 raise ValueError("attachments go only to contacts on ordinary LXMF")
             payload = {"protocol": PROTOCOL, "version": VERSION, "type": "message", "message_id": message_id, "body": text}
             if len(_json(payload).encode("utf-8")) > MAX_TEXT_BYTES:
                 raise ValueError("encoded message envelope exceeds the native 16 KiB text limit")
-            job_id = self._queue("message", address, payload, now, message_id=message_id, title=title, keep_until=keep_until)
+            job_id = self._queue("message", address, payload, now, message_id=message_id, title=title, keep_until=keep_until, **conversation)
             return {"job_id": job_id, "message_id": message_id, "status": "queued"}
 
     def _schedule_retries(self, now, receiver_healthy):
@@ -792,18 +819,29 @@ class Policy:
             return [dict(row, unread=bool(row["unread"]), plain=row["message_id"] is None, authenticated=True, executable=False,
                          attachments=json.loads(row["attachments"] or "[]")) for row in rows]
 
-    def history(self, peer, limit=20):
-        """Recent text exchanged with one peer, oldest first, for conversational context."""
+    def context(self, peer, thread="", limit=20):
+        """Read a model's history and session revision at the same reset boundary."""
+        with self._lock:
+            reset = self.db.execute("""SELECT context_through,id FROM jobs
+                WHERE address=? AND thread=? AND context_through IS NOT NULL ORDER BY id DESC LIMIT 1""",
+                (peer, _thread(thread))).fetchone()
+            inbox_id, job_id = tuple(reset) if reset else (0, 0)
+            return {"messages": self.history(peer, limit, thread=thread, after=(inbox_id, job_id)), "revision": inbox_id}
+
+    def history(self, peer, limit=20, *, thread="", after=(0, 0)):
+        """Recent text in one conversation, oldest first."""
         if not _hex(peer, 32):
             raise ValueError("history peer must be a full 32-hex address")
         if type(limit) is not int or not 1 <= limit <= 100:
             raise ValueError("history limit must be 1..100")
+        _thread(thread)
+        inbox_id, job_id = after
         with self._lock:
             rows = self.db.execute("""SELECT received_at AS at, 'in' AS direction, 'plain' AS kind, text, id, unread, attachments FROM inbox
-                    WHERE source=? AND suppressed=0
-                UNION ALL SELECT created_at, 'out', kind, text, NULL, 0, attachments FROM jobs
-                    WHERE address=? AND kind IN ('plain','message') AND status NOT IN ('skipped')
-                ORDER BY at DESC LIMIT ?""", (peer, peer, limit)).fetchall()
+                    WHERE source=? AND thread=? AND suppressed=0 AND id>?
+                UNION ALL SELECT created_at, 'out', kind, text, id, 0, attachments FROM jobs
+                    WHERE address=? AND thread=? AND kind IN ('plain','message') AND status NOT IN ('skipped') AND id>?
+                ORDER BY at DESC, direction, id DESC LIMIT ?""", (peer, thread, inbox_id, peer, thread, job_id, limit)).fetchall()
         result, budget = [], 96 * 1024
         for row in rows:
             text = json.loads(row["text"])["body"] if row["kind"] == "message" else row["text"]

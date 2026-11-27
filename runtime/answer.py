@@ -42,15 +42,15 @@ def is_local(host):
         return False
 
 
-def default_system(name):
-    return (f"You are {name}, an assistant running on a computer your owner controls. People message you through Ratspeak, "
+def default_system():
+    return ("You are an AI assistant running on a computer your owner controls. People message you through Ratspeak, "
             "sometimes over slow radio links, so reply in plain text without Markdown and keep it short: a few sentences "
             "unless they ask for more. You cannot browse the internet, run commands, or see files. "
             "If you do not know something, say so.")
 
 
 def conversation(history, system, budget=CONTEXT_CHARS):
-    """Chat turns and inbox ids for one peer's unanswered messages, or (None, []) when nothing is waiting."""
+    """Chat turns and inbox ids for one conversation, or (None, []) when nothing is waiting."""
     waiting = [entry for entry in history if entry["direction"] == "in" and entry.get("unread") and entry["text"].strip()]
     if not waiting:
         return None, []

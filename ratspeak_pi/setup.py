@@ -34,16 +34,6 @@ PUBLIC_HUBS = ["1.ratspeak.org:4141", "2.ratspeak.org:4242", "3.ratspeak.org:434
 RESOURCES = json.loads((Path(__file__).parent / "resources.json").read_text())
 DOWNLOADS = [*RESOURCES, *translate.LANGUAGES, "voice"]      # extras fetched after the agent is answering
 BOOT = Path("/boot/firmware/ratspeak-pi")   # on the card's FAT partition: the Mac app reads and writes here
-SYSTEM_PROMPT = (
-    "You are {name}, a small assistant running on a Raspberry Pi that your owner set up. People message you through "
-    "Ratspeak, and each reply is sent whole, so answer in plain text without Markdown and keep it short: two to four "
-    "sentences unless they ask for more. You cannot browse the internet, run commands, or see files. You are a small "
-    "model: if you are not sure of something, say so."
-)
-
-
-AGENT_PROMPT = ("You are {name}, an assistant reached through Ratspeak. Answer in plain text. "
-                "Keep replies brief unless asked for detail. You cannot browse or run commands.")
 
 
 def validate(settings: dict) -> dict:
@@ -441,8 +431,7 @@ def install(settings: dict, services: bool, force_board: bool, model: str | None
         picked = choose_model(board, settings["users"], units.PREFIX, units.STATE / "models",
                               say=lambda text: report("installing", text), force=model, smarter=settings["smarter"],
                               preferred=settings.get("model"), step=step)
-    prompt = AGENT_PROMPT if cloud else SYSTEM_PROMPT
-    (units.STATE / "system.txt").write_text(prompt.format(name=settings["name"]) + "\n")
+    (units.STATE / "system.txt").write_text(llm.CHAT_PROMPT + "\n")
     if services:
         chown()
     step("identity", "Creating its Ratspeak identity")

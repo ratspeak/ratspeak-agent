@@ -100,6 +100,10 @@ Pinned URLs and SHA-256 checksums for every model, library, voice engine, and tr
 **Owner commands** (answered ahead of queued chat):
 `/allow <address>` · `/revoke <address>` · `/anyone` · `/private` · `/status` · `/model [list|id]`
 
+Each Ratspeak conversation tab has its own model context. The owner can send `/clear` or `/clearcontext` in any tab to start fresh there and keep the chat transcript.
+
+You can attach a UTF-8 text file or a ZIP of supported text files such as `.txt`, `.md`, `.csv`, and `.json`. A ZIP can contain up to 64 entries. The agent reads up to 64 KB of decompressed text in memory and sends an excerpt that fits the model's context. For a large archive, send the relevant files or excerpts with your question.
+
 ## Build From Source
 
 Clone [rsReticulum](https://github.com/ratspeak/rsReticulum), [rsLXMF](https://github.com/ratspeak/rsLXMF), and [rsLXST](https://github.com/ratspeak/rsLXST) alongside this repository and fetch their release tags. Building requires Rust 1.96, [Tauri 2](https://tauri.app) (`cargo install tauri-cli --version "^2" --locked`), Python 3.11+, and Docker for the native transport binaries.
