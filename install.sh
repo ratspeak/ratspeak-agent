@@ -29,6 +29,9 @@ if [ -n "${RATSPEAK_OFFLINE_DIR:-}" ] && ! python3 -c 'import astral' 2>/dev/nul
 fi
 for tool in python3 curl qrencode; do command -v "$tool" >/dev/null 2>&1 || need="$need $tool"; done
 python3 -c 'import astral' 2>/dev/null || need="$need python3-astral"     # /sun and /moon
+if [ -z "${RATSPEAK_OFFLINE_DIR:-}" ] && ! command -v pdftotext >/dev/null; then
+  need="$need poppler-utils"   # Read selectable text from PDF attachments.
+fi
 ldconfig -p | grep -q 'libgomp\.so\.1' || need="$need libgomp1"   # llama-server links OpenMP
 # Cloud-init images normally provide this. Offline pairing also works over the card.
 if [ -z "${RATSPEAK_OFFLINE_DIR:-}" ] && ! python3 -c 'from cryptography.hazmat.primitives.ciphers.aead import AESGCM' 2>/dev/null; then

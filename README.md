@@ -104,6 +104,10 @@ Each Ratspeak conversation tab has its own model context. The owner can send `/c
 
 You can attach a UTF-8 text file or a ZIP of supported text files such as `.txt`, `.md`, `.csv`, and `.json`. A ZIP can contain up to 64 entries. The agent reads up to 64 KB of decompressed text in memory and sends an excerpt that fits the model's context. For a large archive, send the relevant files or excerpts with your question.
 
+Attach a PDF with selectable text and send your question with it. For larger PDFs, the agent searches the text and sends relevant passages with PDF page numbers. It processes up to 200 pages or 512,000 characters of extracted text. Scans without a text layer need OCR before sending.
+
+PDF reading uses Poppler's `pdftotext` from `poppler-utils`. Desktop containers and Raspberry Pi installs that use APT install the package automatically. Have it installed on Raspberry Pi OS before an offline setup if you want PDF reading there.
+
 ## Build From Source
 
 Clone [rsReticulum](https://github.com/ratspeak/rsReticulum), [rsLXMF](https://github.com/ratspeak/rsLXMF), and [rsLXST](https://github.com/ratspeak/rsLXST) alongside this repository and fetch their release tags. Building requires Rust 1.96, [Tauri 2](https://tauri.app) (`cargo install tauri-cli --version "^2" --locked`), Python 3.11+, and Docker for the native transport binaries.

@@ -1,5 +1,5 @@
 FROM debian:trixie-slim
-RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-astral python3-libzim curl ca-certificates libgomp1 \
+RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-astral python3-libzim curl ca-certificates libgomp1 poppler-utils \
     && useradd --system --create-home --home-dir /var/lib/ratspeak-pi ratspeak \
     && chmod 700 /var/lib/ratspeak-pi
 WORKDIR /opt/ratspeak-pi

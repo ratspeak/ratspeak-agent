@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-11-27
+
+### Added
+
+- **PDF attachments.** Send a PDF with selectable text and ask a question in the same message. For longer documents, the agent picks relevant passages and lists their page numbers. Scans without a text layer need OCR before sending.
+
 ## [0.1.2] - 2026-11-27
 
 ### Added
